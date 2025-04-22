@@ -1,0 +1,122 @@
+// 📦 Генерация Prisma-клиента (для работы с БД в коде)
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ⚙️ Подключение к PostgreSQL через переменную окружения
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//
+// 👤 Пользователь
+//
+model User {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  email     String   @unique
+  name      String
+  password  String
+  images    String[] // 🖼 Массив URL-ов или путей к изображениям
+
+  // 🔗 Связи
+  exerciseLogs ExerciseLog[]
+  workoutLogs  WorkoutLog[]
+}
+
+//
+// 🏋️ Тренировка (Workout-шаблон, без пользователя)
+//
+model Workout {
+  id         Int      @id @default(autoincrement())
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  name       String
+  exercises  Exercise[]     // 💪 Список упражнений в тренировке
+  workoutLogs WorkoutLog[]  // 📒 Логи выполнения этой тренировки
+}
+
+//
+// 💪 Упражнение
+//
+model Exercise {
+  id         Int      @id @default(autoincrement())
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  name         String
+  times        Int         // ⏱ Кол-во подходов (сет)
+  iconPath     String      @map("icon_path") // 📌 Путь к иконке
+  workouts     Workout[]   // 🔗 К каким тренировкам относится
+  exerciseLogs ExerciseLog[] // 📒 Логи выполнения этого упражнения
+}
+
+//
+// 📘 Лог тренировки (конкретное выполнение пользователем)
+//
+model WorkoutLog {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  isCompleted Boolean  @default(false) @map("is_completed") // ✅ Завершена ли тренировка
+  exerciseLog ExerciseLog[] // 🔗 Все упражнения, выполненные в рамках этой тренировки
+
+  // 🔗 Связи
+  User        User?    @relation(fields: [userId], references: [id])
+  userId      Int?
+
+  Workout     Workout? @relation(fields: [workoutId], references: [id])
+  workoutId   Int?
+
+  @@map("workout_log") // 🗂 Название таблицы в БД
+}
+
+//
+// 📓 Лог выполнения упражнения
+//
+model ExerciseLog {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+
+  isCompleted Boolean   @default(false) @map("is_completed") // ✅ Завершено ли
+
+  times       ExerciseTime[] // 🔗 Массив подходов
+
+  // 🔗 Связи
+  WorkoutLog   WorkoutLog? @relation(fields: [workoutLogId], references: [id])
+  workoutLogId Int?
+
+  User         User?       @relation(fields: [userId], references: [id])
+  userId       Int?
+
+  Exercise     Exercise?   @relation(fields: [exerciseId], references: [id])
+  exerciseId   Int?
+
+  @@map("exercise_log") // 🗂 Название таблицы в БД
+}
+
+//
+// ⏱ Конкретный подход (время, вес, повторения)
+//
+model ExerciseTime {
+  id           Int      @id @default(autoincrement())
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  repeat       Int      @default(0)  // 🔁 Количество повторений
+  weight       Int      @default(0)  // 🏋️ Вес
+  isCompleted  Boolean  @default(false) @map("is_completed") // ✅ Подход завершён?
+
+  // 🔗 Связь с логом упражнения
+  ExerciseLog   ExerciseLog? @relation(fields: [exerciseLogId], references: [id])
+  exerciseLogId Int?
+
+  @@map("exercise_time") // 🗂 Название таблицы в БД
+}
